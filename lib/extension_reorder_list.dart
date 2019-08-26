@@ -6,10 +6,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'tree_list_item.dart';
+import 'package:reorder_tree_list/tree_list_item.dart';
 
 class ExtensionReorderList extends StatefulWidget {
-
   final List<TreeNode> objectTree;
 
   final Widget Function(TreeNode) buildOpenedNode;
@@ -22,29 +21,35 @@ class ExtensionReorderList extends StatefulWidget {
 
   final double indentation;
 
-  ExtensionReorderList(this.objectTree, {Key key, this.onMoveNode, this.indentation = 30, this.buildClosedNode, this.buildNode, this.buildOpenedNode, this.buildLoadingNode, this.onItemTap, this.loadChildren})
+  ExtensionReorderList(this.objectTree,
+      {Key key,
+      this.onMoveNode,
+      this.indentation = 30,
+      this.buildClosedNode,
+      this.buildNode,
+      this.buildOpenedNode,
+      this.buildLoadingNode,
+      this.onItemTap,
+      this.loadChildren})
       : super(key: key);
   @override
   _ExtensionReorderListState createState() {
     return _ExtensionReorderListState();
   }
-
 }
 
 class _ExtensionReorderListState extends State<ExtensionReorderList> {
-
   BuildContext tContext;
 
+  // data of list for display
   List<TreeNode> items = [];
 
   @override
   void initState() {
     super.initState();
-    // this.items = reBuildTree();
   }
 
   Widget build(BuildContext context) {
-    // super.build(context);
     this.tContext = context;
     this.items = reBuildTree();
     return ReorderableListView(
@@ -55,34 +60,45 @@ class _ExtensionReorderListState extends State<ExtensionReorderList> {
   }
 
   void nodeOnReorder(int oldIndex, int newIndex) {
+    // Minus 1 which is the item itself, if the new index is bigger than old index,
     if (newIndex > oldIndex) {
       newIndex -= 1;
     }
 
+    // Get a copy of node list and reorder it
     List<TreeNode> objCopy = reBuildTree();
     final TreeNode item = objCopy.removeAt(oldIndex);
-    TreeNode oldNode = TreeNode(tid: item.tid, isOpen: item.isOpen, isFolder: item.isFolder, name: item.name, tag: item.tag, loading: item.loading, father: item.father);
+    TreeNode oldNode = TreeNode(
+        tid: item.tid,
+        isOpen: item.isOpen,
+        isFolder: item.isFolder,
+        name: item.name,
+        tag: item.tag,
+        loading: item.loading,
+        father: item.father);
     TreeNode node = item;
     objCopy.insert(newIndex, item);
 
-    TreeNode upperTree = (newIndex - 1 >= 0) ? objCopy[newIndex - 1] : null;
-
+    // Find upper node and new father node
+    TreeNode upperNode = (newIndex - 1 >= 0) ? objCopy[newIndex - 1] : null;
     TreeNode newFatherNode;
 
-    // find father
-    if (upperTree != null) {
-      if (upperTree.isFolder) {
-        newFatherNode = upperTree;
+    // Find father node
+    if (upperNode != null) {
+      if (upperNode.isFolder) {
+        newFatherNode = upperNode;
       } else {
-        newFatherNode = upperTree.father;
+        // UpperNode's father maybe null
+        newFatherNode = upperNode.father;
       }
     }
 
-    if (!canReorder(oldIndex, newIndex, item, upperTree)) {
-      return; // can not reorder for some reasons
+    // Ignore invalid reorder
+    if (!canReorder(oldIndex, newIndex, item, upperNode)) {
+      return;
     }
 
-    // remove node from old father node
+    // Remove node from old father node/tree
     if (node.isRoot()) {
       this.widget.objectTree.remove(node);
     } else if (node.father != null &&
@@ -90,55 +106,57 @@ class _ExtensionReorderListState extends State<ExtensionReorderList> {
         node.father.children.indexOf(node) != -1) {
       node.father.children.removeAt(node.father.children.indexOf(node));
     }
-    
-    // insert
+
+    // Insert node to new father node/tree
     if (newFatherNode == null) {
-      // top
+      // Insert node at root top
       int index =
-          upperTree == null ? 0 : this.widget.objectTree.indexOf(upperTree) + 1;
+          upperNode == null ? 0 : this.widget.objectTree.indexOf(upperNode) + 1;
       this.widget.objectTree.insert(index, node);
       node.father = null;
     } else {
-      if (newFatherNode.children == null) {
-        newFatherNode.children = [];
-      }
+      // Upper node is same as the father node
       if (newFatherNode != null &&
-          upperTree != null &&
-          upperTree == newFatherNode) {
-
-        if (node.isRoot() && !upperTree.isOpen) {
-          // node is root && upperTree is not open
-          int index = this.widget.objectTree.indexOf(upperTree) + 1;
-          this.widget.objectTree.insert(index, node);
-        }
-        else {
-          if (upperTree.isRoot() && node.isFolder && !upperTree.isOpen) {
-          // root level
-          int index = this.widget.objectTree.indexOf(upperTree) + 1;
-          this.widget.objectTree.insert(index, node);
-          node.father = null;
+          upperNode != null &&
+          upperNode == newFatherNode) {
+        // Insert root level node to another root node which is not open, insert to the root after upper node
+        if (upperNode.isRoot()) {
+          if (!upperNode.isOpen) {
+            int index = this.widget.objectTree.indexOf(upperNode) + 1;
+            this.widget.objectTree.insert(index, node);
+            node.father = null;
           } else {
-            newFatherNode.children.insert(0, node);
-            node.father = newFatherNode;
+            int index = newFatherNode.children.indexOf(upperNode) + 1;
+            newFatherNode.insertChild(index, node);
+          }
+        } else {
+          // Upper node is not root level
+          if (!upperNode.isOpen) {
+            print(
+                "Logic error, upper node should not equal new father, if upper node is open");
+            return;
+          } else {
+            // insert at 0 as first child node
+            newFatherNode.insertChild(0, node);
           }
         }
       } else {
-        int index = newFatherNode.children.indexOf(upperTree) + 1;
-        newFatherNode.children.insert(index, node);
-        node.father = newFatherNode;
+        // Upper node is not father node
+        int index = newFatherNode.children.indexOf(upperNode) + 1;
+        newFatherNode.insertChild(index, node);
       }
     }
 
-    if(node != null){
-      if(widget.onMoveNode != null){
+    if (node != null) {
+      if (widget.onMoveNode != null) {
         widget.onMoveNode(oldNode, node);
       }
-      setState((){});
+      setState(() {});
     }
   }
 
-  bool canReorder(int oldIndex, int newIndex, TreeNode node, TreeNode upperNode) {
-
+  bool canReorder(
+      int oldIndex, int newIndex, TreeNode node, TreeNode upperNode) {
     if (upperNode != null) {
       if (upperNode.isDescendantOf(node)) {
         print("Can not reorder to children's folder!");
@@ -146,86 +164,94 @@ class _ExtensionReorderListState extends State<ExtensionReorderList> {
       }
     }
 
-    // add more condition for your situation
-
     return true;
   }
 
   bOpenedNode(TreeNode treeNode) {
-    if(widget.buildOpenedNode != null){
+    if (widget.buildOpenedNode != null) {
       return widget.buildOpenedNode(treeNode);
     }
     return ListTile(
-      onTap: (){
-        treeNode.isOpen = !treeNode.isOpen;
-        setState((){});
-      },
-      title: Row(
-        children: <Widget>[
-          SizedBox(width: widget.indentation * treeNode.treeLevel()),
-          const Icon(Icons.indeterminate_check_box),
-          const SizedBox(width: 10,),
-          Text(treeNode.name)
-        ],
-      )
-    );
+        onTap: () {
+          treeNode.isOpen = !treeNode.isOpen;
+          setState(() {});
+        },
+        title: Row(
+          children: <Widget>[
+            SizedBox(width: widget.indentation * treeNode.treeLevel()),
+            const Icon(Icons.indeterminate_check_box),
+            const SizedBox(
+              width: 10,
+            ),
+            Text(treeNode.name)
+          ],
+        ));
   }
 
   bClosedNode(TreeNode treeNode) {
-    if(widget.buildClosedNode != null){
+    if (widget.buildClosedNode != null) {
       return widget.buildClosedNode(treeNode);
     }
     return ListTile(
-        onTap: (){
+        onTap: () {
           treeNode.isOpen = !treeNode.isOpen;
-          setState((){});
+          setState(() {});
         },
         title: Row(
           children: <Widget>[
             SizedBox(width: widget.indentation * treeNode.treeLevel()),
             const Icon(Icons.add_box),
-            const SizedBox(width: 10,),
+            const SizedBox(
+              width: 10,
+            ),
             Text(treeNode.name)
           ],
-        )
-    );
+        ));
   }
-  
+
   bNode(TreeNode treeNode) {
-    if(widget.buildNode != null){
+    if (widget.buildNode != null) {
       return widget.buildNode(treeNode);
     }
     return ListTile(
-      onTap: widget.onItemTap == null? null:() {
-        widget.onItemTap(treeNode);
-      },
-      title: Row(
-        children: <Widget>[
+      onTap: widget.onItemTap == null
+          ? null
+          : () {
+              widget.onItemTap(treeNode);
+            },
+      title: Row(children: <Widget>[
         SizedBox(width: widget.indentation * treeNode.treeLevel()),
         const Icon(Icons.font_download, color: Colors.grey),
         const SizedBox(width: 10),
-          Expanded(
-            child: Text(treeNode.name, style: TextStyle(color: Colors.grey[700]),),
+        Expanded(
+          child: Text(
+            treeNode.name,
+            style: TextStyle(color: Colors.grey[700]),
           ),
-        ]),
-      trailing: widget.onItemTap == null? null:Icon(Icons.keyboard_arrow_right),
+        ),
+      ]),
+      trailing:
+          widget.onItemTap == null ? null : Icon(Icons.keyboard_arrow_right),
     );
   }
 
-  bLoadingNode(TreeNode fatherNode){
-    if(widget.buildLoadingNode != null){
+  bLoadingNode(TreeNode fatherNode) {
+    if (widget.buildLoadingNode != null) {
       return widget.buildLoadingNode();
     }
-    return Text('Loading', style: TextStyle(color: Colors.grey));
+    return Text('Loading...',
+        style: TextStyle(color: Colors.grey));
   }
 
   Widget buildListTile(TreeNode node) {
-    if(node.loading??false){
-      return Container(key: GlobalKey(),
-      child: bLoadingNode(node),) ;
+    if (node.loading ?? false) {
+      return Container(
+        key: GlobalKey(),
+        child: bLoadingNode(node),
+      );
     }
-    if(node.isFolder){
-      if(node.isOpen){
+    if (node.isFolder) {
+      if (node.isOpen) {
         return Container(key: Key(node.tid), child: bOpenedNode(node));
       }
       return Container(key: Key(node.tid), child: bClosedNode(node));
@@ -233,15 +259,11 @@ class _ExtensionReorderListState extends State<ExtensionReorderList> {
     return Container(key: Key(node.tid), child: bNode(node));
   }
 
-  // void reloadItems() {
-  //   this.items = reBuildTree();
-  // }
-
-  reBuildTree(){
+  List<TreeNode> reBuildTree() {
     List<TreeNode> results = [];
-    for(TreeNode item in widget.objectTree){
+    for (TreeNode item in widget.objectTree) {
       results.add(item);
-      if(item.isFolder){
+      if (item.isFolder) {
         addChildren(item, results);
       }
     }
@@ -249,21 +271,20 @@ class _ExtensionReorderListState extends State<ExtensionReorderList> {
   }
 
   void addChildren(TreeNode item, List results) {
-    if(item.isOpen){
-      if(item.children == null){
-        if(widget.loadChildren != null){
+    if (item.isOpen) {
+      if (item.children == null) {
+        if (widget.loadChildren != null) {
           widget.loadChildren(item);
           results.add(TreeNode(loading: true, father: item));
         }
-      }else{
-        for(TreeNode stn in item.children){
+      } else {
+        for (TreeNode stn in item.children) {
           results.add(stn);
-          if(stn.isFolder){
+          if (stn.isFolder) {
             addChildren(stn, results);
           }
         }
       }
     }
   }
-
 }

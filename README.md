@@ -1,6 +1,6 @@
 # reorder_tree_list
 
-A new Flutter package project.
+Reorder tree list
 
 ## Getting Started
 

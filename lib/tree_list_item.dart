@@ -87,4 +87,15 @@ class TreeNode {
       return this.father != null ? this.father.children.indexOf(this) : 0;
     }
   }
+
+  void insertChild(int index, TreeNode node) {
+    if (node == null) return;
+
+    if (this.children.length == 0) {
+      this.children = [];
+    }
+    
+    this.children.insert(index, node);
+    node.father = this;
+  }
 }
