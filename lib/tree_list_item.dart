@@ -30,16 +30,24 @@ class TreeNode {
     return this.tid == another.tid;
   }
 
+  // is self a descendant of another node
   bool isDescendantOf(TreeNode another) {
+
+    if (this.isEqual(another)) {return true;}
+
     TreeNode obj = this;
-    while (!obj.isRoot()) {
-      TreeNode father = obj.father;
-      if (this.isEqual(father)) {
-        return true;
-      } else {
-        obj = obj.father;
+
+    do {
+      if (obj.father == null) {
+        break;
       }
-    }
+
+      if (obj.father.isEqual(another)) {
+        return true;
+      }
+      obj = obj.father;
+
+    } while(!obj.isRoot());
 
     return false;
   }
