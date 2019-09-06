@@ -1,6 +1,6 @@
 name: reorder_tree_list
-description: A handy tree list with reorder feature
-version: 0.0.3
+description: A handy tree list with reorder feature. It accepts a tree struct and display according to the tree list struct. You can also customize the organization. 
+version: 0.1.1
 author: Weigang Chen<isamanthena@gmail.com>
 homepage: https://github.com/ddrdjboy/
 

@@ -13,7 +13,7 @@ Add this to your package's pubspec.yaml file:
 
 ```
 dependencies:
-    reorder_tree_list: ^0.0.2
+    reorder_tree_list: ^0.1.1
 ```
 
 ### 2. Install it
