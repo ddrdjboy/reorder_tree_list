@@ -37,3 +37,5 @@ import 'package:reorder_tree_list/tree_list_item.dart';
 
 ## Demo
 ![Demo](https://github.com/ddrdjboy/reorder_tree_list/blob/master/example.gif)
+
+Updated
